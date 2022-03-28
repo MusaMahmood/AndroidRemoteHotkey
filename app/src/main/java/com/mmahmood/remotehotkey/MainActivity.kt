@@ -11,21 +11,18 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.os.Build
+import android.graphics.Color
 import android.os.Bundle
 import android.os.ParcelUuid
 import android.util.Log
-import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
-import android.widget.TextView
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.mmahmood.remotehotkey.databinding.ActivityMainBinding
+import kotlinx.android.synthetic.main.custom_tile.view.*
 import java.util.*
 
 
@@ -188,10 +185,10 @@ class MainActivity : AppCompatActivity() {
 
         // Code adapted from - https://stackoverflow.com/questions/51430129/create-grid-n-%C3%97-n-in-android-constraintlayout-with-variable-number-of-n
         val layout = binding.conlayout
-
         val color1 = ContextCompat.getColor(this, R.color.holo_blue_bright)
-        val color2 = ContextCompat.getColor(this, R.color.holo_blue_light)
-        var textView: TextView
+        val color2 = Color.WHITE
+//        var textView: TextView
+        var customTileView: CustomTileView
         var lp: ConstraintLayout.LayoutParams
         var id: Int
         val idArray = Array(mRows) { IntArray(mCols) }
@@ -200,20 +197,28 @@ class MainActivity : AppCompatActivity() {
         // TODO: Replace TextView with ImageViews or other custom view
             // Pull characteristics from settings/saved data
         // Add our views to the ConstraintLayout.
+
         for (iRow in 0 until mRows) {
             for (iCol in 0 until mCols) {
-                textView = TextView(this)
                 lp = ConstraintLayout.LayoutParams(
                     ConstraintSet.MATCH_CONSTRAINT,
                     ConstraintSet.MATCH_CONSTRAINT
                 )
                 id = View.generateViewId()
+                val data = AppConstant.allData[id-1]
+                Log.e(TAG, "Current Id: #$id: name: ${data.name}, path: ${data.drawablePath}")
+                val dataString = data.name.ifEmpty { id.toString() }
+                val drawablePath = data.drawablePath.ifEmpty { "placeholder" }
                 idArray[iRow][iCol] = id
-                textView.id = id
-                textView.text = id.toString()
-                textView.gravity = Gravity.CENTER
-                textView.setBackgroundColor(if ((iRow + iCol) % 2 == 0) color1 else color2)
-                layout.addView(textView, lp)
+                customTileView = CustomTileView(this)
+                customTileView.id = id
+                customTileView.setTitle(dataString)
+                customTileView.titleTextView.textSize = 16f
+                customTileView.titleTextView.setTextColor(Color.RED)
+                customTileView.setBackgroundColor(Color.WHITE)
+                val drawableId = applicationContext.resources.getIdentifier(drawablePath, "drawable", packageName)
+                customTileView.imageView.setImageResource(drawableId)
+                layout.addView(customTileView, lp)
             }
         }
 
@@ -248,7 +253,7 @@ class MainActivity : AppCompatActivity() {
         // Make views clickable
         for (iRow in 0 until mRows) {
             for (iCol in 0 until mCols) {
-                findViewById<TextView>(idArray[iRow][iCol]).setOnClickListener {
+                findViewById</*TextView*/CustomTileView>(idArray[iRow][iCol]).setOnClickListener {
                     sendCommand(idArray[iRow][iCol], iRow, iCol)
                 }
             }
@@ -341,8 +346,8 @@ class MainActivity : AppCompatActivity() {
     private fun sendCommand(id: Int, row: Int, col: Int) {
         Log.e(TAG, "Request Sent for [R$row, C$col], id=$id.")
         // TODO use lookup table to send appropriate command.
-        // Data format = [id, command b0, command b1]
-        sendBluetoothCommandUpdate(byteArrayOf(id.toByte(), 0x00, 0x01))
+//        sendBluetoothCommandUpdate(byteArrayOf(id.toByte(), 0x00, 0x01))
+        sendBluetoothCommandUpdate(AppConstant.allData[id-1].byteArray)
     }
 
     private fun sendBluetoothCommandUpdate(data: ByteArray) {

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">RemoteHotkey</string>
+    <string name="textview_title">Title</string>
 </resources>
