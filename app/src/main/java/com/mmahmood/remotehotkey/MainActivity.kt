@@ -1,6 +1,8 @@
 package com.mmahmood.remotehotkey
 
+import android.Manifest
 import android.R
+import android.annotation.SuppressLint
 import android.bluetooth.*
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
@@ -10,22 +12,27 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.os.ParcelUuid
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.mmahmood.remotehotkey.databinding.ActivityMainBinding
 import kotlinx.android.synthetic.main.custom_tile.view.*
 import java.util.*
 
-
+// Added Lint because permission check is redundant.
+@SuppressLint("MissingPermission")
 class MainActivity : AppCompatActivity() {
     // TODO [] Make adjustable in settings
     private var mRows = 6
@@ -40,6 +47,7 @@ class MainActivity : AppCompatActivity() {
     private var mGattActive = false
     // If you want to limit number of registered devices:
 //    private var registeredDeviceLimit = 1
+    private var permissionsSet = false
 
     // Callbacks for BluetoothLE:
     /**
@@ -185,12 +193,13 @@ class MainActivity : AppCompatActivity() {
 
         // Code adapted from - https://stackoverflow.com/questions/51430129/create-grid-n-%C3%97-n-in-android-constraintlayout-with-variable-number-of-n
         val layout = binding.conlayout
-        val color1 = ContextCompat.getColor(this, R.color.holo_blue_bright)
-        val color2 = Color.WHITE
-//        var textView: TextView
         var customTileView: CustomTileView
         var lp: ConstraintLayout.LayoutParams
         var id: Int
+        // TODO: Generate idArray only once so it redraws with the same ids. Will need to change indexing method, as id cannot be relied on.
+        // ...TODO: Temporarily locking to landscape orientation (see this.requestedOrientation)
+        this.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+
         val idArray = Array(mRows) { IntArray(mCols) }
         val cs = ConstraintSet()
 
@@ -253,7 +262,7 @@ class MainActivity : AppCompatActivity() {
         // Make views clickable
         for (iRow in 0 until mRows) {
             for (iCol in 0 until mCols) {
-                findViewById</*TextView*/CustomTileView>(idArray[iRow][iCol]).setOnClickListener {
+                findViewById<CustomTileView>(idArray[iRow][iCol]).setOnClickListener {
                     sendCommand(idArray[iRow][iCol], iRow, iCol)
                 }
             }
@@ -263,8 +272,7 @@ class MainActivity : AppCompatActivity() {
 
         // Initialize Bluetooth:
         bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-
-        initGattServer()
+        if (permissionsSet) initGattServer()
     }
 
     private fun initGattServer() {
@@ -377,8 +385,22 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun checkPermissions(): Boolean {
+        val deniedPermissions = PERMISSIONS_LIST.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
+        if (deniedPermissions.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, deniedPermissions.toTypedArray(), MULTIPLE_PERMISSIONS_REQUEST)
+            return false
+        }
+        return true
+    }
+
     override fun onResume() {
         super.onResume()
+        if (!permissionsSet) {
+            permissionsSet = checkPermissions()
+            initGattServer()
+            permissionsSet = true
+        }
     }
 
     /**
@@ -409,6 +431,17 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private val TAG = MainActivity::class.java.simpleName
+        private const val MULTIPLE_PERMISSIONS_REQUEST = 139
+        @RequiresApi(Build.VERSION_CODES.S)
+        val PERMISSIONS_LIST = arrayOf(
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.SEND_SMS,
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_ADVERTISE
+        )
+
         // Used to load the 'remotehotkey' library on application startup.
         init {
             System.loadLibrary("remotehotkey")
