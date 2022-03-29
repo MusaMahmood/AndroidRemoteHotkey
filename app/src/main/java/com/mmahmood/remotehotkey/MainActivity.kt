@@ -1,6 +1,8 @@
 package com.mmahmood.remotehotkey
 
+import android.Manifest
 import android.R
+import android.annotation.SuppressLint
 import android.bluetooth.*
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
@@ -10,15 +12,16 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.os.ParcelUuid
 import android.util.Log
-import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
-import android.widget.TextView
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -26,9 +29,11 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.mmahmood.remotehotkey.databinding.ActivityMainBinding
+import kotlinx.android.synthetic.main.custom_tile.view.*
 import java.util.*
 
-
+// Added Lint because permission check is redundant.
+@SuppressLint("MissingPermission")
 class MainActivity : AppCompatActivity() {
     // TODO [] Make adjustable in settings
     private var mRows = 6
@@ -43,6 +48,7 @@ class MainActivity : AppCompatActivity() {
     private var mGattActive = false
     // If you want to limit number of registered devices:
 //    private var registeredDeviceLimit = 1
+    private var permissionsSet = false
 
     // Callbacks for BluetoothLE:
     /**
@@ -188,32 +194,41 @@ class MainActivity : AppCompatActivity() {
 
         // Code adapted from - https://stackoverflow.com/questions/51430129/create-grid-n-%C3%97-n-in-android-constraintlayout-with-variable-number-of-n
         val layout = binding.conlayout
-
-        val color1 = ContextCompat.getColor(this, R.color.holo_blue_bright)
-        val color2 = ContextCompat.getColor(this, R.color.holo_blue_light)
-        var textView: TextView
+        var customTileView: CustomTileView
         var lp: ConstraintLayout.LayoutParams
         var id: Int
+        // TODO: Generate idArray only once so it redraws with the same ids. Will need to change indexing method, as id cannot be relied on.
+        // ...TODO: Temporarily locking to landscape orientation (see this.requestedOrientation)
+        this.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+
         val idArray = Array(mRows) { IntArray(mCols) }
         val cs = ConstraintSet()
 
         // TODO: Replace TextView with ImageViews or other custom view
             // Pull characteristics from settings/saved data
         // Add our views to the ConstraintLayout.
+
         for (iRow in 0 until mRows) {
             for (iCol in 0 until mCols) {
-                textView = TextView(this)
                 lp = ConstraintLayout.LayoutParams(
                     ConstraintSet.MATCH_CONSTRAINT,
                     ConstraintSet.MATCH_CONSTRAINT
                 )
                 id = View.generateViewId()
+                val data = AppConstant.allData[id-1]
+                Log.e(TAG, "Current Id: #$id: name: ${data.name}, path: ${data.drawablePath}")
+                val dataString = data.name.ifEmpty { id.toString() }
+                val drawablePath = data.drawablePath.ifEmpty { "placeholder" }
                 idArray[iRow][iCol] = id
-                textView.id = id
-                textView.text = id.toString()
-                textView.gravity = Gravity.CENTER
-                textView.setBackgroundColor(if ((iRow + iCol) % 2 == 0) color1 else color2)
-                layout.addView(textView, lp)
+                customTileView = CustomTileView(this)
+                customTileView.id = id
+                customTileView.setTitle(dataString)
+                customTileView.titleTextView.textSize = 16f
+                customTileView.titleTextView.setTextColor(Color.RED)
+                customTileView.setBackgroundColor(Color.WHITE)
+                val drawableId = applicationContext.resources.getIdentifier(drawablePath, "drawable", packageName)
+                customTileView.imageView.setImageResource(drawableId)
+                layout.addView(customTileView, lp)
             }
         }
 
@@ -248,7 +263,7 @@ class MainActivity : AppCompatActivity() {
         // Make views clickable
         for (iRow in 0 until mRows) {
             for (iCol in 0 until mCols) {
-                findViewById<TextView>(idArray[iRow][iCol]).setOnClickListener {
+                findViewById<CustomTileView>(idArray[iRow][iCol]).setOnClickListener {
                     sendCommand(idArray[iRow][iCol], iRow, iCol)
                 }
             }
@@ -258,8 +273,7 @@ class MainActivity : AppCompatActivity() {
 
         // Initialize Bluetooth:
         bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-
-        initGattServer()
+        if (permissionsSet) initGattServer()
     }
 
     private fun initGattServer() {
@@ -341,8 +355,8 @@ class MainActivity : AppCompatActivity() {
     private fun sendCommand(id: Int, row: Int, col: Int) {
         Log.e(TAG, "Request Sent for [R$row, C$col], id=$id.")
         // TODO use lookup table to send appropriate command.
-        // Data format = [id, command b0, command b1]
-        sendBluetoothCommandUpdate(byteArrayOf(id.toByte(), 0x00, 0x01))
+        sendBluetoothCommandUpdate(AppConstant.allData[id-1].byteArray)
+        Toast.makeText(applicationContext, "Sending Command for ${AppConstant.allData[id-1].name}", Toast.LENGTH_LONG).show()
     }
 
     private fun sendBluetoothCommandUpdate(data: ByteArray) {
@@ -372,8 +386,22 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun checkPermissions(): Boolean {
+        val deniedPermissions = PERMISSIONS_LIST.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
+        if (deniedPermissions.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, deniedPermissions.toTypedArray(), MULTIPLE_PERMISSIONS_REQUEST)
+            return false
+        }
+        return true
+    }
+
     override fun onResume() {
         super.onResume()
+        if (!permissionsSet) {
+            permissionsSet = checkPermissions()
+            initGattServer()
+            permissionsSet = true
+        }
     }
 
     /**
@@ -404,6 +432,17 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private val TAG = MainActivity::class.java.simpleName
+        private const val MULTIPLE_PERMISSIONS_REQUEST = 139
+        @RequiresApi(Build.VERSION_CODES.S)
+        val PERMISSIONS_LIST = arrayOf(
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.SEND_SMS,
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_ADVERTISE
+        )
+
         // Used to load the 'remotehotkey' library on application startup.
         init {
             System.loadLibrary("remotehotkey")

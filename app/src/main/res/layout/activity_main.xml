@@ -27,7 +27,8 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         />
-        <!--  Note if we want to constrain layout into a square:
-            app:layout_constraintDimensionRatio="1:1"  -->
+
+    <!--  Note if we want to constrain layout into a square:
+        app:layout_constraintDimensionRatio="1:1"  -->
 
 </androidx.constraintlayout.widget.ConstraintLayout>
