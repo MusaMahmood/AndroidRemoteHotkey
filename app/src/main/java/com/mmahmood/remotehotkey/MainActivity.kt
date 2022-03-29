@@ -21,6 +21,7 @@ import android.os.ParcelUuid
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -354,8 +355,8 @@ class MainActivity : AppCompatActivity() {
     private fun sendCommand(id: Int, row: Int, col: Int) {
         Log.e(TAG, "Request Sent for [R$row, C$col], id=$id.")
         // TODO use lookup table to send appropriate command.
-//        sendBluetoothCommandUpdate(byteArrayOf(id.toByte(), 0x00, 0x01))
         sendBluetoothCommandUpdate(AppConstant.allData[id-1].byteArray)
+        Toast.makeText(applicationContext, "Sending Command for ${AppConstant.allData[id-1].name}", Toast.LENGTH_LONG).show()
     }
 
     private fun sendBluetoothCommandUpdate(data: ByteArray) {
