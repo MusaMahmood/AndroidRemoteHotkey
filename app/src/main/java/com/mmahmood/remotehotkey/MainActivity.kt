@@ -356,7 +356,7 @@ class MainActivity : AppCompatActivity() {
         Log.e(TAG, "Request Sent for [R$row, C$col], id=$id.")
         // TODO use lookup table to send appropriate command.
         sendBluetoothCommandUpdate(AppConstant.allData[id-1].byteArray)
-        Toast.makeText(applicationContext, "Sending Command for ${AppConstant.allData[id-1].name}", Toast.LENGTH_LONG).show()
+        Toast.makeText(applicationContext, "Sending Command for ${AppConstant.allData[id-1].name}", Toast.LENGTH_SHORT).show()
     }
 
     private fun sendBluetoothCommandUpdate(data: ByteArray) {
