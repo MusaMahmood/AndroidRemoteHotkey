@@ -3,8 +3,10 @@ package com.mmahmood.remotehotkey
 class AppConstant {
     companion object {
         // Note,    Byte 1 Format [Ctrl, Shift, Alt, Win | 0020]
-        //          Byte 2 Format = Windows VirtualKey Code - See: Windows.System.VirtualKey
-        val allData = arrayOf(
+        //          Byte 2 Format = Windows VirtualKey Code - See: Windows.System.VirtualKey\
+        val DefaultTile = HotkeyData("", "", byteArrayOf(0x00, 0x00))
+
+        val DefaultTileSet = arrayOf(
             HotkeyData("TODO", "todo",                  byteArrayOf(0xE2.toByte(), 0x39.toByte())),
             HotkeyData("Excel Daily", "excel",          byteArrayOf(0xE2.toByte(), 0x30.toByte())),
             HotkeyData("Powerpoint", "ppoint",          byteArrayOf(0xC2.toByte(), 0x50.toByte())),
@@ -22,30 +24,29 @@ class AppConstant {
             HotkeyData("MATLAB", "matlab",              byteArrayOf(0xA2.toByte(), 0x4D.toByte())),
             HotkeyData("Acrobat", "acrobat",            byteArrayOf(0x32.toByte(), 0x41.toByte())),
             HotkeyData("Jlink RTT", "jlink",            byteArrayOf(0xC2.toByte(), 0x56.toByte())),
-            HotkeyData("Neovim", "neovim",              byteArrayOf(0xA2.toByte(), 0x4E.toByte())),
+            HotkeyData("OpenBCI", "openbci",            byteArrayOf(0x72.toByte(), 0x4F.toByte())),
             HotkeyData("Sublime", "subl",               byteArrayOf(0xA2.toByte(), 0x6B.toByte())),
             HotkeyData("Android Projects", "android",   byteArrayOf(0xE2.toByte(), 0x4E.toByte())),
             HotkeyData("Flutter Projects", "flutter",   byteArrayOf(0xA2.toByte(), 0x46.toByte())),
             HotkeyData("Windows Projects", "w11",       byteArrayOf(0xE2.toByte(), 0x32.toByte())),
             HotkeyData("Python Projects", "python",     byteArrayOf(0xE2.toByte(), 0x31.toByte())),
             HotkeyData("Linux Projects", "linux",       byteArrayOf(0xE2.toByte(), 0x4C.toByte())),
-            HotkeyData("Job Search", "todo",            byteArrayOf(0xE2.toByte(), 0x4A.toByte())),
-            HotkeyData("VSCode", "vscodium",            byteArrayOf(0xE2.toByte(), 0x56.toByte())),
-            HotkeyData("", "", byteArrayOf(0x00, 0x00)),
-            HotkeyData("", "", byteArrayOf(0x00, 0x00)),
-            HotkeyData("", "", byteArrayOf(0x00, 0x00)),
-            HotkeyData("", "", byteArrayOf(0x00, 0x00)),
-            HotkeyData("", "", byteArrayOf(0x00, 0x00)),
-            HotkeyData("WebStorm", "wstorm",             byteArrayOf(0xA2.toByte(), 0x35)),
-//            HotkeyData(" ", "dw",                       byteArrayOf(0xA2.toByte(), 0x35)),
+            HotkeyData("nRFConnect", "nrfconn",         byteArrayOf(0xE2.toByte(), 0x4A.toByte())),
+            HotkeyData("VS Code", "vscode",             byteArrayOf(0xE2.toByte(), 0x4F.toByte())),
+            HotkeyData("Prusa Slicer", "prusa",         byteArrayOf(0xE2.toByte(), 0x53)),
             HotkeyData("Signal", "signal",              byteArrayOf(0xA2.toByte(), 0x60.toByte())),
             HotkeyData("Pushbullet", "pushbullet",      byteArrayOf(0xE2.toByte(), 0x50.toByte())),
             HotkeyData("1password", "pass2",            byteArrayOf(0xE2.toByte(), 0x20.toByte())),
             HotkeyData("TeamViewer", "teamv",           byteArrayOf(0xA2.toByte(), 0x54.toByte())),
-            HotkeyData("Prusa Slicer", "prusa",         byteArrayOf(0xE2.toByte(), 0x53)),
             HotkeyData("Google", "gchrome",             byteArrayOf(0xE2.toByte(), 0x4D.toByte())),
             HotkeyData("Ungoogled", "chromium",         byteArrayOf(0xA2.toByte(), 0x55.toByte())),
             HotkeyData("VMware", "vmware",              byteArrayOf(0xE2.toByte(), 0x56.toByte())),
+            HotkeyData("", "", byteArrayOf(0x00, 0x00)),
+            HotkeyData("", "", byteArrayOf(0x00, 0x00)),
+            HotkeyData("", "", byteArrayOf(0x00, 0x00)),
+            HotkeyData("", "", byteArrayOf(0x00, 0x00)),
+            HotkeyData("", "", byteArrayOf(0x00.toByte(), 0x00.toByte())),
+            HotkeyData("", "", byteArrayOf(0x00, 0x00)),
             HotkeyData("Task Manager", "taskman",       byteArrayOf(0xC2.toByte(), 0x1B.toByte())),
             HotkeyData("Afterburner", "msiab",          byteArrayOf(0xA2.toByte(), 0x37)),
             HotkeyData("AppWiz", "appwiz",              byteArrayOf(0xA2.toByte(), 0x36)),
@@ -54,6 +55,23 @@ class AppConstant {
             HotkeyData("Pin Window", "pushpin",         byteArrayOf(0x92.toByte(), 0x54.toByte())),
             HotkeyData("cmd", "cmd",                    byteArrayOf(0xE2.toByte(), 0x43.toByte())),
             HotkeyData("Calculator", "calc",            byteArrayOf(0x82.toByte(), 0x60.toByte())),
+        )
+
+        val TextTileSet = arrayOf( // 48 Total
+            HotkeyData("Sublime", "subl",       byteArrayOf(0xA2.toByte(), 0x6B.toByte())),
+            HotkeyData("Close window", "xout",  byteArrayOf(0x82.toByte(), 0x57.toByte())),
+            HotkeyData("Delete Line", "bckspc", byteArrayOf(0xC2.toByte(), 0x4B.toByte())),
+//            HotkeyData("Select Line", "select_line", byteArrayOf(0x82.toByte(), 0x76.toByte())),
+            HotkeyData("Indent", "right_indent", byteArrayOf(0x82.toByte(), 0xDD.toByte())),
+            HotkeyData("Unindent", "left_indent", byteArrayOf(0x82.toByte(), 0xDB.toByte())),
+//            HotkeyData("Find& Replace", "find_replace", byteArrayOf(0x82.toByte(), 0x72.toByte()))
+        )
+
+        val AltiumTileSet = arrayOf(
+            HotkeyData("Altium", "altium", byteArrayOf(0xC2.toByte(), 0x41.toByte())),
+            HotkeyData("", "", byteArrayOf(0x00, 0x00)),
+            HotkeyData("", "", byteArrayOf(0x00, 0x00)),
+            HotkeyData("", "", byteArrayOf(0x00, 0x00)),
         )
     }
 }

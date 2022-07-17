@@ -1,7 +1,6 @@
 package com.mmahmood.remotehotkey
 
 import android.Manifest
-import android.R
 import android.annotation.SuppressLint
 import android.bluetooth.*
 import android.bluetooth.le.AdvertiseCallback
@@ -21,6 +20,9 @@ import android.os.ParcelUuid
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.Spinner
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
@@ -34,12 +36,13 @@ import java.util.*
 
 // Added Lint because permission check is redundant.
 @SuppressLint("MissingPermission")
-class MainActivity : AppCompatActivity() {
-    // TODO [] Make adjustable in settings
+class MainActivity : AppCompatActivity(), AdapterView.OnItemSelectedListener {
+    private var mFirstRun = true
     private var mRows = 6
     private var mCols = 8
 
     private lateinit var binding: ActivityMainBinding
+    private lateinit var mSpinner: Spinner
     // Bluetooth API
     private lateinit var bluetoothManager: BluetoothManager
     private var bluetoothGattServer: BluetoothGattServer? = null
@@ -49,6 +52,10 @@ class MainActivity : AppCompatActivity() {
     // If you want to limit number of registered devices:
 //    private var registeredDeviceLimit = 1
     private var permissionsSet = false
+
+    private val allTileSets = arrayOf(AppConstant.DefaultTileSet, AppConstant.TextTileSet,
+        AppConstant.AltiumTileSet)
+    private var currentTileset = 0
 
     // Callbacks for BluetoothLE:
     /**
@@ -192,20 +199,42 @@ class MainActivity : AppCompatActivity() {
         // Keep screen on:
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+        // TODO: Temporarily locking to landscape orientation (see this.requestedOrientation)
+        this.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+
+        // Init Spinner:
+        mSpinner = binding.multimodeSpinner
+        mSpinner.onItemSelectedListener = this
+        ArrayAdapter.createFromResource(
+            this,
+            R.array.mmode_spinner_menu,
+            android.R.layout.simple_spinner_item
+        ).also { adapter ->
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            mSpinner.adapter = adapter
+        }
+        // Init Default Tiles:
+
+        // Initialize Bluetooth:
+        bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        if (permissionsSet) initGattServer()
+    }
+
+    private fun removeAllTiles() {
+
+    }
+
+    private fun initializeTileSet(dataReference: Array<HotkeyData>) {
         // Code adapted from - https://stackoverflow.com/questions/51430129/create-grid-n-%C3%97-n-in-android-constraintlayout-with-variable-number-of-n
         val layout = binding.conlayout
         var customTileView: CustomTileView
         var lp: ConstraintLayout.LayoutParams
         var id: Int
-        // TODO: Generate idArray only once so it redraws with the same ids. Will need to change indexing method, as id cannot be relied on.
-        // ...TODO: Temporarily locking to landscape orientation (see this.requestedOrientation)
-        this.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-
         val idArray = Array(mRows) { IntArray(mCols) }
         val cs = ConstraintSet()
 
         // TODO: Replace TextView with ImageViews or other custom view
-            // Pull characteristics from settings/saved data
+        // Pull characteristics from settings/saved data
         // Add our views to the ConstraintLayout.
 
         for (iRow in 0 until mRows) {
@@ -214,8 +243,17 @@ class MainActivity : AppCompatActivity() {
                     ConstraintSet.MATCH_CONSTRAINT,
                     ConstraintSet.MATCH_CONSTRAINT
                 )
-                id = View.generateViewId()
-                val data = AppConstant.allData[id-1]
+                if (mFirstRun) {
+                    id = View.generateViewId()
+                    mFirstRun = false
+                } else {
+                    id = (8*iRow) + 1 + iCol
+                }
+                val data = if ((id-1) > (dataReference.size - 1)) {
+                    AppConstant.DefaultTile
+                } else {
+                    dataReference[id-1]
+                }
                 Log.e(TAG, "Current Id: #$id: name: ${data.name}, path: ${data.drawablePath}")
                 val dataString = data.name.ifEmpty { id.toString() }
                 val drawablePath = data.drawablePath.ifEmpty { "placeholder" }
@@ -270,10 +308,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         cs.applyTo(layout)
-
-        // Initialize Bluetooth:
-        bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        if (permissionsSet) initGattServer()
     }
 
     private fun initGattServer() {
@@ -354,9 +388,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun sendCommand(id: Int, row: Int, col: Int) {
         Log.e(TAG, "Request Sent for [R$row, C$col], id=$id.")
-        // TODO use lookup table to send appropriate command.
-        sendBluetoothCommandUpdate(AppConstant.allData[id-1].byteArray)
-        Toast.makeText(applicationContext, "Sending Command for ${AppConstant.allData[id-1].name}", Toast.LENGTH_SHORT).show()
+        sendBluetoothCommandUpdate(allTileSets[currentTileset][id-1].byteArray)
+        Toast.makeText(applicationContext, "Sending Command for ${allTileSets[currentTileset][id-1].name}", Toast.LENGTH_SHORT).show()
     }
 
     private fun sendBluetoothCommandUpdate(data: ByteArray) {
@@ -422,6 +455,20 @@ class MainActivity : AppCompatActivity() {
         }
 
         return true
+    }
+
+    override fun onNothingSelected(p0: AdapterView<*>?) {
+        Log.i(TAG, "Spinner: Nothing selected")
+    }
+
+    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+        currentTileset = position
+        if (position >= allTileSets.size) {
+            Toast.makeText(applicationContext, "List Nonexistent!" , Toast.LENGTH_SHORT).show()
+            return
+        }
+        initializeTileSet(allTileSets[position])
+        Toast.makeText(applicationContext, "List: ${parent?.getItemAtPosition(position)}" , Toast.LENGTH_SHORT).show()
     }
 
     /**

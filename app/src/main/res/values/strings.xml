@@ -1,4 +1,10 @@
 <resources>
     <string name="app_name">RemoteHotkey</string>
     <string name="textview_title">Title</string>
+    <string name="title_text_view">Title-Spinner-Elem</string>
+    <string-array name="mmode_spinner_menu">
+        <item>main</item>
+        <item>SublimeText</item>
+        <item>Altium</item>
+    </string-array>
 </resources>
